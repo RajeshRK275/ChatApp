@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { createContext, useState } from "react";
 import { baseUrl, postRequest } from "../utils/services";
 
@@ -7,37 +7,87 @@ export const AuthContext = createContext();
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [registerError, setRegisterError] = useState(null);
-  const [isregisterLoading, setIsRegisterLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [registerInfo, setRegisterInfo] = useState({
     name: null,
     email: "",
     password: "",
   });
 
-  console.log("registerInfo", registerInfo);
+  const [loginInfo, setLoginInfo] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [loginError, setLoginError] = useState(null);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+
+  console.log("Register Info ", registerInfo);
+  console.log("Login Info", loginInfo);
+
+
+  useEffect(() => {
+    const user = localStorage.getItem("User");
+    setUser(JSON.parse(user));
+  }, []);
 
   const updateRegisterInfo = useCallback((info) => {
     setRegisterInfo(info);
   }, []);
 
-  const registerUser = useCallback(async (e) => {
-    e.preventDefault();
-    setIsRegisterLoading(true);
-    setRegisterError(null);
+  const updateLoginInfo = useCallback((info) => {
+    setLoginInfo(info);
+  }, []);
+
+  const registerUser = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setIsRegisterLoading(true);
+      setRegisterError(null);
+
+      const response = await postRequest(
+        `${baseUrl}/users/register`,
+        JSON.stringify(registerInfo)
+      );
+
+      setIsRegisterLoading(false);
+
+      if (response.error) {
+        return setRegisterError(response);
+      }
+      localStorage.setItem("User", JSON.stringify(response));
+      setUser(response);
+    },
+    [registerInfo]
+  );
+
+  const loginUser = useCallback(async (e) => {
+
+    e.preventDefault()
+
+    setIsLoginLoading(true)
+    setLoginError(null)
 
     const response = await postRequest(
-      `${baseUrl}/users/register`,
-      JSON.stringify(registerInfo)
+      `${baseUrl}/users/login`,
+      JSON.stringify(loginInfo)
     );
 
-    setIsRegisterLoading(false)
+    setIsLoginLoading(false)
 
-    if (response.error) {
-      return setRegisterError(response);
+    if(response.error){
+        return setLoginError(response)
     }
-    localStorage.setItem("User",JSON.stringify(response))
+
+    localStorage.setItem("User", JSON.stringify(response))
     setUser(response)
-  }, [registerInfo]);
+
+  }, [loginInfo]);
+
+  const logoutUser = useCallback(() => {
+    localStorage.removeItem("User");
+    setUser(null);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -47,7 +97,13 @@ export const AuthContextProvider = ({ children }) => {
         updateRegisterInfo,
         registerUser,
         registerError,
-        isregisterLoading,
+        isRegisterLoading,
+        logoutUser,
+        loginUser,
+        loginError,
+        loginInfo,
+        updateLoginInfo,
+        isLoginLoading,
       }}
     >
       {children}
